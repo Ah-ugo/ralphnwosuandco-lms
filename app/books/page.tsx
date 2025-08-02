@@ -51,6 +51,8 @@ type BookCategory =
   | 'Journal'
   | 'Reference';
 
+export const dynamic = 'force-dynamic';
+
 export default function BooksPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

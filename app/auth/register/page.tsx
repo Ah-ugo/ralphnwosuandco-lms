@@ -9,6 +9,7 @@ import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 
 const { Title, Text } = Typography;
+export const dynamic = 'force-dynamic';
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);

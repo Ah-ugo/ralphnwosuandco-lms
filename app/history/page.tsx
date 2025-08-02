@@ -27,7 +27,7 @@ const { Content } = Layout;
 const { Title, Text } = Typography;
 
 type LendingStatus = 'borrowed' | 'returned' | 'overdue';
-
+export const dynamic = 'force-dynamic';
 export default function LendingHistoryPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

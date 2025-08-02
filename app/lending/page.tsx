@@ -43,7 +43,7 @@ const { Option } = Select;
 const { Title, Text } = Typography;
 
 type LendingStatus = 'borrowed' | 'returned' | 'overdue';
-
+export const dynamic = 'force-dynamic';
 export default function LendingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

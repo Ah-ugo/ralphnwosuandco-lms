@@ -46,7 +46,7 @@ import type { ColumnsType } from 'antd/es/table';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { Option } = Select;
-
+export const dynamic = 'force-dynamic';
 export default function UsersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

@@ -33,7 +33,7 @@ import { PERMISSIONS } from '@/lib/auth';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
-
+export const dynamic = 'force-dynamic';
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

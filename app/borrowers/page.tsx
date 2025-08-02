@@ -47,7 +47,7 @@ const { Option } = Select;
 const { Title, Text } = Typography;
 
 type BorrowerRole = 'Intern' | 'Lawyer' | 'Staff' | 'Partner' | 'Associate';
-
+export const dynamic = 'force-dynamic';
 export default function BorrowersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

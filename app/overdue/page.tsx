@@ -31,7 +31,7 @@ import { message } from 'antd';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
-
+export const dynamic = 'force-dynamic';
 export default function OverdueBooksPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
