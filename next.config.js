@@ -16,8 +16,9 @@ const nextConfig = {
   experimental: {
     disableOptimizedLoading: true,
     isrMemoryCacheSize: 0,
-    // Add this to prevent any static generation
+    // Add these to prevent any static generation
     fallbackNodePolyfills: false,
+    serverComponentsExternalPackages: ['mongodb', 'mongoose'],
   },
 };
 
