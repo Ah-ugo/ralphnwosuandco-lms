@@ -1,5 +1,6 @@
 /** @format */
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { getApiDocs } from '@/lib/swagger';
 import { NextResponse } from 'next/server';
 

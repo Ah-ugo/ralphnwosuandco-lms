@@ -1,12 +1,13 @@
 /** @format */
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { type NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { authMiddleware, requirePermission } from '@/lib/middleware';
 import { PERMISSIONS } from '@/lib/auth';
 import type { DashboardStats } from '@/lib/models';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
