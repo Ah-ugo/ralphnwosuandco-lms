@@ -1,7 +1,8 @@
 /** @format */
 
 'use client';
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { useState, useEffect } from 'react';
 import {
   Layout,
@@ -42,7 +43,7 @@ const { Content } = Layout;
 const { Title, Text } = Typography;
 
 type NotificationType = 'success' | 'warning' | 'error' | 'info';
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 export default function NotificationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

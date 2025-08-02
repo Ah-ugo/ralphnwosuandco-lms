@@ -1,7 +1,8 @@
 /** @format */
 
 'use client';
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Form, Input, Typography, Card, Alert, Spin } from 'antd';
@@ -9,7 +10,7 @@ import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 
 const { Title, Text } = Typography;
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);

@@ -1,7 +1,8 @@
 /** @format */
 
 'use client';
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { useState, useEffect } from 'react';
 import {
   Layout,
@@ -30,7 +31,7 @@ const { Option } = Select;
 const { Title, Text } = Typography;
 
 type SearchType = 'books' | 'borrowers';
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 export default function SearchFilterPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

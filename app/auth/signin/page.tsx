@@ -1,7 +1,8 @@
 /** @format */
 
 'use client';
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -10,7 +11,7 @@ import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 
 const { Title, Text } = Typography;
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false);

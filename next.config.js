@@ -4,20 +4,22 @@
  */
 
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  images: {
-    unoptimized: true,
-  },
-  // This ensures we don't do static export
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+  images: { unoptimized: true },
+
+  // These settings completely disable static optimization
   output: 'standalone',
-  // Remove serverActions from experimental as they're now stable
+  trailingSlash: true,
+
+  // Remove all static generation features
+  generateBuildId: async () => 'build-' + Date.now(),
+
+  // Disable static pages completely
   experimental: {
-    // Add any other experimental features you need here
+    isrMemoryCacheSize: 0,
+    disableOptimizedLoading: true,
+    largePageDataBytes: 128 * 1000, // 128KB
   },
 };
 
