@@ -8,18 +8,16 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   images: { unoptimized: true },
 
-  // These settings completely disable static optimization
+  // These settings completely disable static export
   output: 'standalone',
   trailingSlash: true,
 
-  // Remove all static generation features
-  generateBuildId: async () => 'build-' + Date.now(),
-
-  // Disable static pages completely
+  // Disable all static optimization
   experimental: {
-    isrMemoryCacheSize: 0,
     disableOptimizedLoading: true,
-    largePageDataBytes: 128 * 1000, // 128KB
+    isrMemoryCacheSize: 0,
+    // Add this to prevent any static generation
+    fallbackNodePolyfills: false,
   },
 };
 
