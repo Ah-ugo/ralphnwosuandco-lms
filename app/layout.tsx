@@ -4,11 +4,29 @@ export const revalidate = 0;
 import type React from 'react';
 import './globals.css';
 import './output.css';
-import { Inter } from 'next/font/google';
+import {
+  Inter,
+  Montserrat,
+  Playfair,
+  Playfair_Display,
+} from 'next/font/google';
 import { ConfigProvider } from 'antd';
 import SessionProvider from '@/components/providers/session-provider';
 
 const inter = Inter({ subsets: ['latin'] });
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap', // Optional: ensures text remains visible during webfont load
+});
+
+// Define Playfair for headers
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap', // Optional: ensures text remains visible during webfont load
+});
 
 export const metadata = {
   title: 'Ralph Nwosu & Co. Library Management System',
@@ -21,8 +39,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang='en'>
-      <body className={inter.className}>
+    <html lang='en' className={`${montserrat.variable} ${playfair.variable}`}>
+      <body className='font-montserrat'>
         <SessionProvider>
           <ConfigProvider
             theme={{
@@ -36,6 +54,7 @@ export default function RootLayout({
                 colorTextSecondary: '#4a5568', // Medium gray for secondary text
                 colorBgContainer: '#ffffff', // White for card backgrounds
                 colorBorderSecondary: '#e5e7eb', // Light gray for borders
+                fontFamily: 'var(--font-montserrat), sans-serif',
               },
               components: {
                 Layout: {

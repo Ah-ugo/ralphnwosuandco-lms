@@ -128,15 +128,10 @@ export default function Sidebar() {
       className='fixed h-full z-50'
       theme='dark'
     >
-      <div className='h-16 flex items-center justify-center py-4 border-b border-gray-700'>
-        <Title
-          color={'#fff'}
-          style={{ color: 'white' }}
-          level={4}
-          className='text-white m-0'
-        >
+      <div className='h-16 flex px-4 border-b border-gray-700'>
+        <h1 className='text-white m-0 text-xl mt-4 font-bold'>
           Ralph Nwosu & Co.
-        </Title>
+        </h1>
       </div>
       <Menu
         theme='dark'
