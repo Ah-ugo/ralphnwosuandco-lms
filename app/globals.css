@@ -12,6 +12,25 @@
   background: #1f2937 !important;
 }
 
+.ant-menu-item-selected {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  color: #1890ff !important;
+}
+
+.ant-menu-item:not(.ant-menu-item-selected):hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Sidebar item text */
+.ant-menu-item {
+  transition: all 0.3s ease;
+  margin: 4px 8px !important;
+  border-radius: 6px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
 .ant-menu-dark {
   background: #1f2937 !important;
 }

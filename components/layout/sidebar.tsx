@@ -18,6 +18,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { PERMISSIONS } from '@/lib/auth';
+import clsx from 'clsx';
 
 const { Sider } = Layout;
 const { Title } = Typography;
@@ -65,13 +66,6 @@ export default function Sidebar() {
       onClick: () => router.push('/overdue'),
       permission: PERMISSIONS.LENDINGS_READ,
     },
-    // {
-    //   key: '/search',
-    //   icon: <SearchOutlined className='text-lg' />,
-    //   label: 'Search & Filter',
-    //   onClick: () => router.push('/search'),
-    //   permission: PERMISSIONS.BOOKS_READ,
-    // },
     {
       key: '/history',
       icon: <HistoryOutlined className='text-lg' />,
@@ -117,7 +111,16 @@ export default function Sidebar() {
     )
     .map((item) => {
       const { permission, ...rest } = item;
-      return rest;
+      return {
+        ...rest,
+        className: clsx(
+          '!flex !items-center !h-12 !py-0 !my-1 !mx-2 !rounded-md',
+          {
+            '!bg-primary/10 !text-primary': pathname === item.key,
+            'hover:!bg-white/10': pathname !== item.key,
+          }
+        ),
+      };
     });
 
   return (
