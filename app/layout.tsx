@@ -12,6 +12,11 @@ import {
 } from 'next/font/google';
 import { ConfigProvider } from 'antd';
 import SessionProvider from '@/components/providers/session-provider';
+import { checkAndSendReminders } from '@/lib/reminderService';
+
+if (typeof window !== 'undefined') {
+  checkAndSendReminders();
+}
 
 const inter = Inter({ subsets: ['latin'] });
 

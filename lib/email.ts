@@ -29,17 +29,41 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_SERVER_HOST,
-  port: Number.parseInt(process.env.EMAIL_SERVER_PORT || '587'),
-  secure: process.env.EMAIL_SERVER_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_SERVER_USER,
-    pass: process.env.EMAIL_SERVER_PASSWORD,
-  },
-});
+const createTransporter = () => {
+  const requiredEnvVars = [
+    'SMTP_SERVER',
+    'EMAIL_SERVER_PORT',
+    'EMAIL_FROM',
+    'SMTP_PASSWORD',
+  ];
+
+  const missingVars = requiredEnvVars.filter(
+    (varName) => !process.env[varName]
+  );
+  if (missingVars.length > 0) {
+    throw new Error(
+      `Missing required email environment variables: ${missingVars.join(', ')}`
+    );
+  }
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_SERVER,
+    port: Number.parseInt(process.env.EMAIL_SERVER_PORT || '465'),
+    secure: process.env.EMAIL_SECURE === 'true', // Use the EMAIL_SECURE variable
+    auth: {
+      user: process.env.EMAIL_FROM, // Use EMAIL_FROM as the username
+      pass: process.env.SMTP_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development',
+  });
+};
 
 /**
  * Sends an email using the configured Nodemailer transporter.
@@ -47,26 +71,53 @@ const transporter = nodemailer.createTransport({
  * @returns Promise<boolean> indicating success or failure.
  */
 export async function sendEmail({ to, subject, html }: EmailOptions) {
-  if (!process.env.EMAIL_FROM) {
-    console.warn(
-      'EMAIL_FROM environment variable is not set. Email sending skipped.'
-    );
-    return;
-  }
+  console.log('Attempting to send email to:', to);
 
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+    const transporter = createTransporter();
+
+    console.log('Using SMTP config:', {
+      host: process.env.SMTP_SERVER,
+      port: process.env.EMAIL_SERVER_PORT,
+      user: process.env.EMAIL_FROM?.substring(0, 3) + '...',
+    });
+
+    console.log('Verifying SMTP connection...');
+    await transporter.verify();
+    console.log('SMTP connection verified');
+
+    console.log('Sending email...');
+    const info = await transporter.sendMail({
+      from: `"Ralph Nwosu & Co." <${process.env.EMAIL_FROM}>`,
       to,
       subject,
       html,
     });
-    console.log(`Email sent to ${to} with subject: ${subject}`);
+
+    console.log('Message sent successfully:', info.messageId);
+    return true;
   } catch (error) {
-    console.error(`Error sending email to ${to}:`, error);
+    console.error('Email sending failed:', error);
     throw new Error(
       `Failed to send email: ${
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
+  }
+}
+
+export async function testEmailConnection() {
+  try {
+    console.log('Testing email server connection...');
+    const transporter = createTransporter();
+    await transporter.verify();
+    console.log('✅ Email server connection verified');
+    return true;
+  } catch (error) {
+    console.error('❌ Email server connection failed:', error);
+    throw new Error(
+      `Email connection failed: ${
+        error instanceof Error ? error.message : 'Unknown error'
       }`
     );
   }
@@ -97,6 +148,36 @@ export function generateOverdueEmailHtml(
     </div>
   `;
 }
+
+export const documentSignatureNotification = (
+  recipientName: string,
+  documentTitle: string,
+  caseTitle: string,
+  signedBy: string,
+  signedAt: Date,
+  documentUrl: string
+) => ({
+  subject: `Document Signed: ${documentTitle}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2 style="color: #1f2937;">Document Signed: ${documentTitle}</h2>
+      <p>Dear ${recipientName},</p>
+      <p>The following document has been signed:</p>
+      <ul>
+        <li><strong>Document:</strong> ${documentTitle}</li>
+        <li><strong>Case:</strong> ${caseTitle}</li>
+        <li><strong>Signed by:</strong> ${signedBy}</li>
+        <li><strong>Signed at:</strong> ${signedAt.toLocaleString()}</li>
+      </ul>
+      <p>You can view the signed document <a href="${documentUrl}">here</a>.</p>
+      <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+        <p style="font-weight: bold;">Signature Preview:</p>
+        <img src="${documentUrl}" alt="Document Signature" style="max-width: 200px; border: 1px solid #ddd; margin-top: 10px;"/>
+      </div>
+      <p>Best regards,<br>The Ralph Nwosu & Co. Team</p>
+    </div>
+  `,
+});
 
 export const emailTemplates = {
   welcomeEmail: (userName: string, userRole: string) => ({

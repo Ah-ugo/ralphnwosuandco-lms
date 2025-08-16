@@ -1,5 +1,4 @@
 /** @format */
-
 import type { ObjectId } from 'mongodb';
 
 export interface User {
@@ -25,9 +24,9 @@ export interface Book {
     | 'Case Law'
     | 'Journal'
     | 'Reference'
-    | string;
+    | string; // Added string for flexibility
   isbn?: string;
-  bookId: string;
+  bookId: string; // Unique identifier for the book
   totalCopies: number;
   availableCopies: number;
   shelfLocation: string;
@@ -40,18 +39,18 @@ export interface Book {
 export interface Borrower {
   _id?: ObjectId | string;
   name: string;
-  role: 'Intern' | 'Lawyer' | 'Staff' | 'Partner' | 'Associate' | string;
+  role: 'Intern' | 'Lawyer' | 'Staff' | 'Partner' | 'Associate' | string; // Added string for flexibility
   phone: string;
   email?: string;
-  memberId: string;
+  memberId: string; // Unique ID for the borrower
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export interface LendingRecord {
-  _id?: ObjectId | string;
-  bookId: ObjectId | string;
-  borrowerId: ObjectId | string;
+  _id?: ObjectId | string; // Use ObjectId for internal representation
+  bookId: ObjectId | string; // Reference to Book._id
+  borrowerId: ObjectId | string; // Reference to Borrower._id
   borrowDate: Date;
   dueDate: Date;
   returnDate?: Date;
@@ -59,7 +58,7 @@ export interface LendingRecord {
   notes?: string;
   createdAt?: Date;
   updatedAt?: Date;
-
+  // Populated fields for client-side display (optional, for convenience)
   book?: Book;
   borrower?: Borrower;
 }
@@ -78,8 +77,8 @@ export interface DashboardStats {
 }
 
 export interface Notification {
-  _id?: ObjectId | string;
-  userId: ObjectId | string;
+  _id?: ObjectId | string; // Use ObjectId for internal representation
+  userId: ObjectId | string; // Reference to User._id
   message: string;
   type:
     | 'info'
@@ -93,4 +92,49 @@ export interface Notification {
   createdAt?: Date;
   lendingId?: ObjectId | string;
   bookId?: ObjectId | string;
+}
+
+// New interfaces for Case Management System
+export interface Case {
+  _id?: ObjectId | string;
+  caseId: string; // Unique identifier for the case (e.g., "RNCL-2023-001")
+  title: string;
+  description?: string;
+  status: 'Open' | 'Closed' | 'Pending' | 'Archived' | string;
+  clientName: string;
+  assignedTo?: ObjectId | string; // Reference to User._id (e.g., the lawyer/staff assigned)
+  createdAt?: Date;
+  updatedAt?: Date;
+  // Populated field for client-side display
+  assignedUser?: User;
+}
+
+// export interface Document {
+//   _id?: ObjectId | string;
+//   caseId: ObjectId | string; // Reference to Case._id
+//   title: string;
+//   content: string; // Can store text, HTML, or Markdown
+//   fileUrl?: string; // URL for uploaded files (e.g., PDF, image)
+//   cloudinaryPublicId?: string; // New field to store Cloudinary public ID for deletion
+//   type: 'text' | 'pdf' | 'image' | 'word' | 'other' | string; // Type of document
+//   createdAt?: Date;
+//   updatedAt?: Date;
+//   // Populated field for client-side display
+//   case?: Case;
+// }
+
+export interface Document {
+  _id?: ObjectId | string;
+  caseId: ObjectId | string;
+  title: string;
+  content: string;
+  fileUrl?: string;
+  cloudinaryPublicId?: string;
+  type: 'text' | 'pdf' | 'image' | 'word' | 'other' | string;
+  signature?: string;
+  signedBy?: string;
+  signedAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  case?: Case;
 }

@@ -1,5 +1,4 @@
 /** @format */
-
 export const PERMISSIONS = {
   // Dashboard
   DASHBOARD_READ: 'dashboard:read',
@@ -40,6 +39,18 @@ export const PERMISSIONS = {
 
   // API Docs
   API_DOCS_READ: 'api_docs:read',
+
+  // New: Case Management
+  CASES_READ: 'cases:read',
+  CASES_CREATE: 'cases:create',
+  CASES_UPDATE: 'cases:update',
+  CASES_DELETE: 'cases:delete',
+
+  // New: Document Management
+  DOCUMENTS_READ: 'documents:read',
+  DOCUMENTS_CREATE: 'documents:create',
+  DOCUMENTS_UPDATE: 'documents:update',
+  DOCUMENTS_DELETE: 'documents:delete',
 };
 
 export const SUPER_ADMIN_PERMISSIONS = Object.values(PERMISSIONS);
@@ -62,6 +73,14 @@ export const ADMIN_PERMISSIONS = [
   PERMISSIONS.REPORTS_EXPORT,
   PERMISSIONS.USERS_READ,
   PERMISSIONS.API_DOCS_READ,
+  PERMISSIONS.CASES_READ,
+  PERMISSIONS.CASES_CREATE,
+  PERMISSIONS.CASES_UPDATE,
+  PERMISSIONS.CASES_DELETE,
+  PERMISSIONS.DOCUMENTS_READ,
+  PERMISSIONS.DOCUMENTS_CREATE,
+  PERMISSIONS.DOCUMENTS_UPDATE,
+  PERMISSIONS.DOCUMENTS_DELETE,
 ];
 
 export const LIBRARIAN_PERMISSIONS = [
@@ -76,6 +95,8 @@ export const LIBRARIAN_PERMISSIONS = [
   PERMISSIONS.LENDINGS_CREATE,
   PERMISSIONS.LENDINGS_UPDATE,
   PERMISSIONS.REPORTS_READ,
+  PERMISSIONS.CASES_READ, // Librarians can view cases
+  PERMISSIONS.DOCUMENTS_READ, // Librarians can view documents
 ];
 
 export const DEFAULT_USER_PERMISSIONS = [
@@ -84,6 +105,8 @@ export const DEFAULT_USER_PERMISSIONS = [
   PERMISSIONS.BORROWERS_READ,
   PERMISSIONS.LENDINGS_READ,
   PERMISSIONS.NOTIFICATIONS_READ,
+  PERMISSIONS.CASES_READ, // Users can view cases
+  PERMISSIONS.DOCUMENTS_READ, // Users can view documents
 ];
 
 export const hasPermissions = (

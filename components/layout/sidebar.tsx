@@ -14,6 +14,7 @@ import {
   ApiOutlined,
   LogoutOutlined,
   SettingOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -86,6 +87,13 @@ export default function Sidebar() {
       label: 'User Management',
       onClick: () => router.push('/users'),
       permission: PERMISSIONS.USERS_READ,
+    },
+    {
+      key: '/cases/',
+      icon: <FolderOutlined className='text-lg' />,
+      label: 'Case Management',
+      onClick: () => router.push('/cases'),
+      permission: PERMISSIONS.CASES_READ,
     },
     {
       key: '/api-docs/',

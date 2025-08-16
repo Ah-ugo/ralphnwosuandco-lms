@@ -32,6 +32,8 @@
     "nodemailer": "^6.9.8",
     "react": "^18",
     "react-dom": "^18",
+    "react-quill": "^2.0.0",
+    "stream": "^0.0.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.10.5",
     "tailwind-merge": "^3.3.1",

@@ -1,5 +1,4 @@
 /** @format */
-
 import { type NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import type { User } from '@/lib/models';
@@ -7,7 +6,6 @@ import {
   ADMIN_PERMISSIONS,
   DEFAULT_USER_PERMISSIONS,
   LIBRARIAN_PERMISSIONS,
-  PERMISSIONS,
   SUPER_ADMIN_PERMISSIONS,
 } from '@/lib/auth';
 
@@ -31,7 +29,6 @@ export async function authMiddleware(req: NextRequest) {
   if (req.method === 'OPTIONS') {
     return null;
   }
-
   const token = await getToken(req);
 
   if (!token) {
@@ -53,7 +50,6 @@ export async function authMiddleware(req: NextRequest) {
 
 export async function getUserPermissions(req: NextRequest): Promise<string[]> {
   const token = await getToken(req);
-
   if (!token?.email) {
     return [];
   }
@@ -69,11 +65,13 @@ export async function getUserPermissions(req: NextRequest): Promise<string[]> {
       return [];
     }
 
+    // Combine user-specific permissions with default role permissions
     const allPermissions = [
       ...(user.permissions || []),
       ...getDefaultPermissionsForRole(user.role),
     ];
 
+    // Return unique permissions
     return [...new Set(allPermissions)];
   } catch (error) {
     console.error('Permission fetch error:', error);
@@ -97,7 +95,6 @@ function getDefaultPermissionsForRole(role?: string): string[] {
 export const requirePermission = (requiredPermission: string) => {
   return async (req: NextRequest) => {
     const userPermissions = await getUserPermissions(req);
-
     if (!userPermissions.includes(requiredPermission)) {
       return NextResponse.json(
         {
@@ -110,7 +107,6 @@ export const requirePermission = (requiredPermission: string) => {
         { status: 403 }
       );
     }
-
     return null;
   };
 };

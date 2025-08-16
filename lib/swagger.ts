@@ -1,5 +1,4 @@
 /** @format */
-
 import { createSwaggerSpec } from 'next-swagger-doc';
 
 export const getApiDocs = async () => {
@@ -144,6 +143,68 @@ export const getApiDocs = async () => {
               createdAt: { type: 'string', format: 'date-time' },
               lendingId: { type: 'string', format: 'objectId' },
               bookId: { type: 'string', format: 'objectId' },
+            },
+          },
+          // New Schemas for Case Management
+          Case: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', format: 'objectId' },
+              caseId: {
+                type: 'string',
+                description: 'Unique identifier for the case',
+              },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              status: {
+                type: 'string',
+                enum: ['Open', 'Closed', 'Pending', 'Archived'],
+              },
+              clientName: { type: 'string' },
+              assignedTo: {
+                type: 'string',
+                format: 'objectId',
+                description: 'User ID of the assigned lawyer/staff',
+              },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              assignedUser: {
+                // Populated user details
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  email: { type: 'string', format: 'email' },
+                },
+              },
+            },
+          },
+          Document: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', format: 'objectId' },
+              caseId: {
+                type: 'string',
+                format: 'objectId',
+                description: 'ID of the case this document belongs to',
+              },
+              title: { type: 'string' },
+              content: {
+                type: 'string',
+                description: 'Content of the document (text, HTML, Markdown)',
+              },
+              fileUrl: {
+                type: 'string',
+                format: 'url',
+                description: 'URL for uploaded files (optional)',
+              },
+              type: {
+                type: 'string',
+                enum: ['text', 'pdf', 'image', 'word', 'other'],
+                description: 'Type of document',
+              },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              case: { $ref: '#/components/schemas/Case' }, // Populated case details
             },
           },
         },

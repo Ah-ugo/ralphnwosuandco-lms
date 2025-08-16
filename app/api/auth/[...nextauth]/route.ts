@@ -10,6 +10,7 @@ import {
   DEFAULT_USER_PERMISSIONS,
   ADMIN_PERMISSIONS,
   SUPER_ADMIN_PERMISSIONS,
+  LIBRARIAN_PERMISSIONS, // Import the new permission set
 } from '@/lib/auth';
 
 export const authOptions = {
@@ -24,7 +25,6 @@ export const authOptions = {
         if (!credentials?.email || !credentials.password) {
           return null;
         }
-
         const db = await getDatabase();
         const user = await db
           .collection<User>('users')
@@ -35,7 +35,6 @@ export const authOptions = {
         }
 
         const isValid = await compare(credentials.password, user.password);
-
         if (!isValid) {
           return null;
         }
@@ -49,19 +48,7 @@ export const authOptions = {
             permissions = ADMIN_PERMISSIONS;
             break;
           case 'Librarian':
-            permissions = [
-              ...DEFAULT_USER_PERMISSIONS,
-              'books:create',
-              'books:update',
-              'books:delete',
-              'borrowers:create',
-              'borrowers:update',
-              'borrowers:delete',
-              'lendings:create',
-              'lendings:update',
-              'notifications:create',
-              'notifications:update',
-            ];
+            permissions = LIBRARIAN_PERMISSIONS; // Use the new Librarian permissions
             break;
           case 'User':
           default:
@@ -103,7 +90,6 @@ export const authOptions = {
         session.user.permissions = token.permissions;
       }
       console.log('Session:', JSON.stringify(session, null, 2));
-
       return session;
     },
   },

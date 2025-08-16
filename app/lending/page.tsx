@@ -31,6 +31,7 @@ import {
   SwapOutlined,
   CheckCircleOutlined,
   PlusOutlined,
+  MailOutlined,
 } from '@ant-design/icons';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
@@ -44,7 +45,7 @@ const { Option } = Select;
 const { Title, Text } = Typography;
 
 type LendingStatus = 'borrowed' | 'returned' | 'overdue';
-// export const dynamic = 'force-dynamic';
+
 export default function LendingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function LendingPage() {
   const [availableBooks, setAvailableBooks] = useState<Book[]>([]);
   const [borrowersList, setBorrowersList] = useState<Borrower[]>([]);
   const [loading, setLoading] = useState(false);
+  const [notifying, setNotifying] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
   const [selectedLendingId, setSelectedLendingId] = useState<string | null>(
@@ -144,6 +146,40 @@ export default function LendingPage() {
       }
     } catch (error) {
       message.error('Failed to fetch borrowers');
+    }
+  };
+
+  const handleNotifyOverdue = async () => {
+    setNotifying(true);
+    try {
+      const response = await fetch('/api/lendings/notify-overdue', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.notifiedCount > 0) {
+          message.success(
+            `Sent overdue notifications to ${result.notifiedCount} borrowers (${result.totalOverdue} total overdue)`
+          );
+        } else if (result.totalOverdue > 0) {
+          message.warning(
+            `Found ${result.totalOverdue} overdue books but couldn't send notifications (missing emails?)`
+          );
+        } else {
+          message.info('No overdue books found');
+        }
+        fetchLendings(); // Refresh the list to update statuses
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send notifications');
+      }
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : 'Failed to send notifications'
+      );
+    } finally {
+      setNotifying(false);
     }
   };
 
@@ -398,6 +434,17 @@ export default function LendingPage() {
                       </Option>
                     ))}
                   </Select>
+                  {canUpdateLendings && (
+                    <Button
+                      icon={<MailOutlined />}
+                      onClick={handleNotifyOverdue}
+                      loading={notifying}
+                      className='w-full sm:w-auto'
+                      disabled={notifying}
+                    >
+                      Notify Overdue
+                    </Button>
+                  )}
                   {canCreateLendings && (
                     <Button
                       type='primary'
