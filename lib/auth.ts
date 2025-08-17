@@ -1,4 +1,7 @@
 /** @format */
+import bcrypt from 'bcryptjs';
+
+// Permission constants
 export const PERMISSIONS = {
   // Dashboard
   DASHBOARD_READ: 'dashboard:read',
@@ -40,22 +43,26 @@ export const PERMISSIONS = {
   // API Docs
   API_DOCS_READ: 'api_docs:read',
 
-  // New: Case Management
+  // Case Management
   CASES_READ: 'cases:read',
   CASES_CREATE: 'cases:create',
   CASES_UPDATE: 'cases:update',
   CASES_DELETE: 'cases:delete',
 
-  // New: Document Management
+  // Document Management
   DOCUMENTS_READ: 'documents:read',
   DOCUMENTS_CREATE: 'documents:create',
   DOCUMENTS_UPDATE: 'documents:update',
   DOCUMENTS_DELETE: 'documents:delete',
-};
+} as const;
 
-export const SUPER_ADMIN_PERMISSIONS = Object.values(PERMISSIONS);
+// Type for permissions
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
-export const ADMIN_PERMISSIONS = [
+// Permission groups
+export const SUPER_ADMIN_PERMISSIONS: Permission[] = Object.values(PERMISSIONS);
+
+export const ADMIN_PERMISSIONS: Permission[] = [
   PERMISSIONS.DASHBOARD_READ,
   PERMISSIONS.BOOKS_READ,
   PERMISSIONS.BOOKS_CREATE,
@@ -72,6 +79,9 @@ export const ADMIN_PERMISSIONS = [
   PERMISSIONS.REPORTS_READ,
   PERMISSIONS.REPORTS_EXPORT,
   PERMISSIONS.USERS_READ,
+  PERMISSIONS.USERS_CREATE,
+  PERMISSIONS.USERS_UPDATE,
+  PERMISSIONS.USERS_DELETE,
   PERMISSIONS.API_DOCS_READ,
   PERMISSIONS.CASES_READ,
   PERMISSIONS.CASES_CREATE,
@@ -83,7 +93,7 @@ export const ADMIN_PERMISSIONS = [
   PERMISSIONS.DOCUMENTS_DELETE,
 ];
 
-export const LIBRARIAN_PERMISSIONS = [
+export const LIBRARIAN_PERMISSIONS: Permission[] = [
   PERMISSIONS.DASHBOARD_READ,
   PERMISSIONS.BOOKS_READ,
   PERMISSIONS.BOOKS_CREATE,
@@ -95,23 +105,45 @@ export const LIBRARIAN_PERMISSIONS = [
   PERMISSIONS.LENDINGS_CREATE,
   PERMISSIONS.LENDINGS_UPDATE,
   PERMISSIONS.REPORTS_READ,
-  PERMISSIONS.CASES_READ, // Librarians can view cases
-  PERMISSIONS.DOCUMENTS_READ, // Librarians can view documents
+  PERMISSIONS.CASES_READ,
+  PERMISSIONS.DOCUMENTS_READ,
 ];
 
-export const DEFAULT_USER_PERMISSIONS = [
+export const DEFAULT_USER_PERMISSIONS: Permission[] = [
   PERMISSIONS.DASHBOARD_READ,
   PERMISSIONS.BOOKS_READ,
   PERMISSIONS.BORROWERS_READ,
   PERMISSIONS.LENDINGS_READ,
   PERMISSIONS.NOTIFICATIONS_READ,
-  PERMISSIONS.CASES_READ, // Users can view cases
-  PERMISSIONS.DOCUMENTS_READ, // Users can view documents
+  PERMISSIONS.CASES_READ,
+  PERMISSIONS.DOCUMENTS_READ,
 ];
 
+// Permission checking utility
 export const hasPermissions = (
-  userPermissions: string[],
-  requiredPermissions: string[]
-) => {
+  userPermissions: Permission[],
+  requiredPermissions: Permission[]
+): boolean => {
   return requiredPermissions.every((perm) => userPermissions.includes(perm));
+};
+
+// Password utilities
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return await bcrypt.hash(password, salt);
+}
+
+export async function verifyPassword(
+  password: string,
+  hashedPassword: string
+): Promise<boolean> {
+  return await bcrypt.compare(password, hashedPassword);
+}
+
+// Role to permissions mapping
+export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  'Super Admin': SUPER_ADMIN_PERMISSIONS,
+  Admin: ADMIN_PERMISSIONS,
+  Librarian: LIBRARIAN_PERMISSIONS,
+  User: DEFAULT_USER_PERMISSIONS,
 };

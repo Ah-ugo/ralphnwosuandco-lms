@@ -1,144 +1,85 @@
 /** @format */
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-import { type NextRequest, NextResponse } from 'next/server';
+
+import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { authMiddleware, requirePermission } from '@/lib/middleware';
-import { PERMISSIONS } from '@/lib/auth';
-import type { User } from '@/lib/models';
-import { hash } from 'bcryptjs';
+import { PERMISSIONS, ROLE_PERMISSIONS } from '@/lib/auth';
+import { ObjectId } from 'mongodb';
+import { sendEmail } from '@/lib/email';
+import {
+  generateRandomPassword,
+  generateRandomToken,
+  isValidEmail,
+} from '@/lib/utils';
+import { hashPassword } from '@/lib/auth';
 
-/**
- * @swagger
- * /api/users:
- *   get:
- *     tags: [Users]
- *     summary: Get all users
- *     description: Retrieve a list of all users with pagination and search capabilities. Requires USERS_READ permission.
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number for pagination.
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of items per page.
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search query for name or email.
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of users retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/User'
- *                 total:
- *                   type: integer
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
- *       500:
- *         description: Internal server error
- *   post:
- *     tags: [Users]
- *     summary: Create a new user
- *     description: Add a new user to the system. Requires USERS_CREATE permission.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - password
- *               - role
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 format: password
- *               role:
- *                 type: string
- *                 enum: [User, Librarian, Admin, Super Admin]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
- *       409:
- *         description: User with this email already exists
- *       500:
- *         description: Internal server error
- */
+interface User {
+  _id: ObjectId;
+  email: string;
+  name?: string;
+  role: string;
+  permissions: string[];
+  password?: string;
+  resetToken?: string;
+  resetTokenExpires?: Date;
+  invitationToken?: string;
+  invitationExpires?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// GET all users (admin only)
 export async function GET(request: NextRequest) {
   try {
-    const authError = await authMiddleware(request);
-    if (authError) return authError;
+    const authResponse = await authMiddleware(request);
+    if (authResponse) return authResponse;
 
-    const permissionError = await requirePermission(PERMISSIONS.USERS_READ)(
+    const permissionResponse = await requirePermission(PERMISSIONS.USERS_READ)(
       request
     );
-    if (permissionError) return permissionError;
+    if (permissionResponse) return permissionResponse;
 
     const db = await getDatabase();
     const { searchParams } = new URL(request.url);
-    const page = Number.parseInt(searchParams.get('page') || '1');
-    const limit = Number.parseInt(searchParams.get('limit') || '10');
-    const searchQuery = searchParams.get('search') || '';
+
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const role = searchParams.get('role') || '';
 
     const query: any = {};
-    if (searchQuery) {
+    if (search) {
       query.$or = [
-        { name: { $regex: searchQuery, $options: 'i' } },
-        { email: { $regex: searchQuery, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
       ];
+    }
+    if (role) {
+      query.role = role;
     }
 
     const users = await db
       .collection<User>('users')
       .find(query)
-      .project({ password: 0 })
       .skip((page - 1) * limit)
       .limit(limit)
+      .sort({ createdAt: -1 })
       .toArray();
 
     const total = await db.collection<User>('users').countDocuments(query);
 
     return NextResponse.json({
-      users: users.map((user) => ({ ...user, _id: user._id?.toString() })),
+      users: users.map((user) => ({
+        _id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
       total,
+      page,
+      limit,
     });
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -149,56 +90,146 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Create new user or send invitation (admin only)
 export async function POST(request: NextRequest) {
   try {
-    const authError = await authMiddleware(request);
-    if (authError) return authError;
+    const authResponse = await authMiddleware(request);
+    if (authResponse) return authResponse;
 
-    const permissionError = await requirePermission(PERMISSIONS.USERS_CREATE)(
-      request
-    );
-    if (permissionError) return permissionError;
+    const permissionResponse = await requirePermission(
+      PERMISSIONS.USERS_CREATE
+    )(request);
+    if (permissionResponse) return permissionResponse;
 
     const db = await getDatabase();
-    const body = await request.json();
-    const { name, email, password, role, permissions } = body;
+    const { email, name, role, sendInvitation } = await request.json();
 
-    if (!name || !email || !password || !role) {
+    if (!email || !role) {
       return NextResponse.json(
-        { error: 'Name, email, password, and role are required' },
+        { error: 'Email and role are required' },
         { status: 400 }
       );
     }
 
-    const usersCollection = db.collection<User>('users');
-
-    const existingUser = await usersCollection.findOne({ email });
-    if (existingUser) {
+    if (!isValidEmail(email)) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
+        { error: 'Invalid email format' },
+        { status: 400 }
       );
     }
 
-    const hashedPassword = await hash(password, 12);
+    // Check if user already exists
+    const existingUser = await db.collection<User>('users').findOne({ email });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User with this email already exists' },
+        { status: 400 }
+      );
+    }
 
-    const newUser: User = {
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      permissions: permissions || [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    // Set permissions based on role
+    let permissions: string[] = [];
+    switch (role) {
+      case 'Super Admin':
+        permissions = ROLE_PERMISSIONS.SUPER_ADMIN_PERMISSIONS;
+        break;
+      case 'Admin':
+        permissions = ROLE_PERMISSIONS.ADMIN_PERMISSIONS;
+        break;
+      case 'Librarian':
+        permissions = ROLE_PERMISSIONS.LIBRARIAN_PERMISSIONS;
+        break;
+      default:
+        permissions = ROLE_PERMISSIONS.DEFAULT_USER_PERMISSIONS;
+    }
 
-    const result = await usersCollection.insertOne(newUser);
+    if (sendInvitation) {
+      // Create invitation flow
+      const invitationToken = generateRandomToken();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    const { password: _, ...userWithoutPassword } = newUser;
-    return NextResponse.json(
-      { ...userWithoutPassword, _id: result.insertedId.toString() },
-      { status: 201 }
-    );
+      const newUser = {
+        email,
+        name,
+        role,
+        permissions,
+        invitationToken,
+        invitationExpires: expiresAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await db.collection<User>('users').insertOne(newUser);
+
+      // Send invitation email
+      const invitationLink = `${process.env.NEXTAUTH_URL}/auth/invite?token=${invitationToken}`;
+      await sendEmail({
+        to: email,
+        subject: `You've been invited to ${
+          process.env.APP_NAME || 'the system'
+        }`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>You've been invited!</h2>
+            <p>Hello${name ? ` ${name}` : ''},</p>
+            <p>You've been invited to join ${
+              process.env.APP_NAME || 'our system'
+            } as a ${role}.</p>
+            <p>Please click the link below to complete your registration:</p>
+            <p><a href="${invitationLink}" style="background-color: #2563eb; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; display: inline-block;">Complete Registration</a></p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+          </div>
+        `,
+      });
+
+      return NextResponse.json(
+        { message: 'Invitation sent successfully' },
+        { status: 201 }
+      );
+    } else {
+      // Create user directly (for admin creating accounts)
+      const temporaryPassword = generateRandomPassword();
+      const hashedPassword = await hashPassword(temporaryPassword);
+
+      const newUser = {
+        email,
+        name,
+        role,
+        permissions,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await db.collection<User>('users').insertOne(newUser);
+
+      // Send welcome email with temporary password
+      await sendEmail({
+        to: email,
+        subject: `Your ${
+          process.env.APP_NAME || 'system'
+        } account has been created`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>Account Created</h2>
+            <p>Hello${name ? ` ${name}` : ''},</p>
+            <p>Your account has been created with the role: <strong>${role}</strong>.</p>
+            <p>Your temporary password is: <strong>${temporaryPassword}</strong></p>
+            <p>Please log in and change your password immediately.</p>
+            <p><a href="${
+              process.env.NEXTAUTH_URL
+            }/auth/login" style="background-color: #2563eb; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; display: inline-block;">Log In Now</a></p>
+            <p>If you didn't request this, please contact your administrator immediately.</p>
+          </div>
+        `,
+      });
+
+      return NextResponse.json(
+        { message: 'User created successfully' },
+        { status: 201 }
+      );
+    }
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(

@@ -149,6 +149,29 @@ export function generateOverdueEmailHtml(
   `;
 }
 
+export async function sendInvitationEmail(email: string, token: string) {
+  const invitationLink = `${process.env.NEXTAUTH_URL}/auth/accept-invitation?token=${token}`;
+
+  const emailOptions = {
+    to: email,
+    subject: `You've been invited to ${process.env.APP_NAME || 'our system'}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>You've been invited!</h2>
+        <p>You've been invited to join ${
+          process.env.APP_NAME || 'our system'
+        }.</p>
+        <p>Please click the link below to complete your registration:</p>
+        <p><a href="${invitationLink}" style="background-color: #2563eb; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; display: inline-block;">Complete Registration</a></p>
+        <p>This link will expire in 24 hours.</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  };
+
+  return sendEmail(emailOptions);
+}
+
 export const documentSignatureNotification = (
   recipientName: string,
   documentTitle: string,
