@@ -5,7 +5,13 @@ import { getDatabase } from '@/lib/mongodb';
 import { authMiddleware, requirePermission } from '@/lib/middleware';
 import { PERMISSIONS } from '@/lib/auth';
 import { ObjectId } from 'mongodb';
-import { sendEmail } from '@/lib/email';
+
+interface AuthenticatedRequest extends NextRequest {
+  user?: {
+    id: string;
+    permissions: string[];
+  };
+}
 
 export async function GET(
   request: NextRequest,
@@ -79,6 +85,8 @@ export async function PUT(
     const { id } = params;
     const updateData = await request.json();
 
+    console.log(`Attempting to update user ${id} with data:`, updateData);
+
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
@@ -89,34 +97,62 @@ export async function PUT(
     // Non-admins can't change their role or permissions
     if (
       !isSelf &&
-      !request.user?.permissions.includes(PERMISSIONS.USERS_UPDATE)
+      !(request as AuthenticatedRequest).user?.permissions.includes(
+        PERMISSIONS.USERS_UPDATE
+      )
     ) {
       delete updateData.role;
       delete updateData.permissions;
     }
 
-    const updatePayload: any = { updatedAt: new Date() };
-    if (updateData.name) updatePayload.name = updateData.name;
-    if (updateData.role) updatePayload.role = updateData.role;
-    if (updateData.permissions)
-      updatePayload.permissions = updateData.permissions;
+    const updatePayload: any = {
+      ...updateData,
+      updatedAt: new Date(),
+    };
 
-    const result = await db
+    // Verify user exists first
+    const existingUser = await db
       .collection('users')
-      .findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: updatePayload },
-        { returnDocument: 'after' }
-      );
+      .findOne({ _id: new ObjectId(id) });
 
-    if (!result.value) {
+    if (!existingUser) {
+      console.log(`User ${id} not found`);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Perform the update
+    const updateResult = await db
+      .collection('users')
+      .updateOne({ _id: new ObjectId(id) }, { $set: updatePayload });
+
+    console.log(`Update result for user ${id}:`, updateResult);
+
+    if (updateResult.modifiedCount === 0) {
+      console.log(`No changes made to user ${id}`);
+      return NextResponse.json(
+        { message: 'No changes were made' },
+        { status: 200 }
+      );
+    }
+
+    // Fetch the updated user
+    const updatedUser = await db
+      .collection('users')
+      .findOne({ _id: new ObjectId(id) });
+
+    if (!updatedUser) {
+      console.error(`User ${id} not found after update`);
+      return NextResponse.json(
+        { error: 'User not found after update' },
+        { status: 404 }
+      );
     }
 
     // Remove sensitive data
     const { password, resetToken, resetTokenExpires, ...userData } =
-      result.value;
+      updatedUser;
 
+    console.log(`Successfully updated user ${id}`);
     return NextResponse.json({
       ...userData,
       _id: userData._id.toString(),
@@ -124,7 +160,10 @@ export async function PUT(
   } catch (error) {
     console.error('Error updating user:', error);
     return NextResponse.json(
-      { error: 'Failed to update user' },
+      {
+        error: 'Failed to update user',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

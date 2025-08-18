@@ -14,21 +14,15 @@ export async function PUT(
     const authResponse = await authMiddleware(request);
     if (authResponse) return authResponse;
 
-    // Users can only update their own password
-    if (request.user?.id !== params.id) {
-      return NextResponse.json(
-        { error: 'You can only update your own password' },
-        { status: 403 }
-      );
-    }
-
     const db = await getDatabase();
     const { id } = params;
-    const { currentPassword, newPassword } = await request.json();
+    const { currentPassword, newPassword, adminOverride } =
+      await request.json();
 
-    if (!currentPassword || !newPassword) {
+    // Validate input
+    if (!newPassword) {
       return NextResponse.json(
-        { error: 'Current and new password are required' },
+        { error: 'New password is required' },
         { status: 400 }
       );
     }
@@ -48,16 +42,51 @@ export async function PUT(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Verify current password
-    const passwordMatch = await verifyPassword(currentPassword, user.password);
-    if (!passwordMatch) {
+    // Check if requester is admin
+    const isAdmin = request.user?.role === 'admin';
+
+    // Authorization check
+    if (!isAdmin && request.user?.id !== id) {
       return NextResponse.json(
-        { error: 'Current password is incorrect' },
-        { status: 401 }
+        { error: 'You can only update your own password' },
+        { status: 403 }
       );
     }
 
-    // Hash new password
+    // Password verification for non-admin or admin changing their own password
+    if (!isAdmin || (isAdmin && request.user?.id === id)) {
+      if (!currentPassword) {
+        return NextResponse.json(
+          { error: 'Current password is required' },
+          { status: 400 }
+        );
+      }
+
+      const passwordMatch = await verifyPassword(
+        currentPassword,
+        user.password
+      );
+      if (!passwordMatch) {
+        return NextResponse.json(
+          { error: 'Current password is incorrect' },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Additional confirmation for admin changing another user's password
+    if (isAdmin && request.user?.id !== id && adminOverride !== true) {
+      return NextResponse.json(
+        {
+          error:
+            'Admin override required. Set adminOverride: true to confirm password change',
+          requiresAdminOverride: true,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Hash and update the new password
     const hashedPassword = await hashPassword(newPassword);
 
     await db.collection('users').updateOne(

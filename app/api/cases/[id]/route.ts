@@ -192,7 +192,7 @@ export async function PUT(
     const db = await getDatabase();
     const { id } = params;
     const body = await request.json();
-    const { _id, caseId, ...updateData } = body; // Exclude _id and caseId from direct update
+    const { _id, caseId, ...updateData } = body;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -203,50 +203,95 @@ export async function PUT(
 
     const objectId = new ObjectId(id);
 
+    // First check if the case exists
+    const existingCase = await db
+      .collection<Case>('cases')
+      .findOne({ _id: objectId });
+
+    if (!existingCase) {
+      return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+    }
+
     const updatePayload: Partial<Case> = {
       ...updateData,
       updatedAt: new Date(),
     };
 
-    // Ensure assignedTo is ObjectId if present and valid
-    if (
-      updatePayload.assignedTo &&
-      typeof updatePayload.assignedTo === 'string'
-    ) {
-      if (ObjectId.isValid(updatePayload.assignedTo)) {
+    // Handle assignedTo conversion
+    if (updatePayload.assignedTo) {
+      if (
+        typeof updatePayload.assignedTo === 'string' &&
+        ObjectId.isValid(updatePayload.assignedTo)
+      ) {
         updatePayload.assignedTo = new ObjectId(updatePayload.assignedTo);
       } else {
-        // If assignedTo is an empty string or invalid, set it to undefined to clear the reference
         updatePayload.assignedTo = undefined;
       }
-    } else if (updatePayload.assignedTo === null) {
-      // Explicitly handle null to clear the reference
-      updatePayload.assignedTo = undefined;
     }
 
-    const result = await db
+    // Perform the update
+    const updateResult = await db
       .collection<Case>('cases')
-      .findOneAndUpdate(
-        { _id: objectId },
-        { $set: updatePayload },
-        { returnDocument: 'after' }
-      );
+      .updateOne({ _id: objectId }, { $set: updatePayload });
 
-    if (!result.value) {
+    if (updateResult.modifiedCount === 0) {
       return NextResponse.json(
-        { error: 'Case not found or no changes made' },
+        { error: 'No changes made to the case' },
+        { status: 200 }
+      );
+    }
+
+    // Fetch the updated case with the same pipeline as GET
+    const pipeline = [
+      { $match: { _id: objectId } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'assignedTo',
+          foreignField: '_id',
+          as: 'assignedUser',
+        },
+      },
+      { $unwind: { path: '$assignedUser', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: { $toString: '$_id' },
+          caseId: 1,
+          title: 1,
+          description: 1,
+          status: 1,
+          clientName: 1,
+          assignedTo: { $toString: '$assignedTo' },
+          createdAt: 1,
+          updatedAt: 1,
+          'assignedUser.name': '$assignedUser.name',
+          'assignedUser.role': '$assignedUser.role',
+        },
+      },
+    ];
+
+    const updatedCases = await db
+      .collection<Case>('cases')
+      .aggregate(pipeline)
+      .toArray();
+
+    const updatedCase = updatedCases[0];
+
+    if (!updatedCase) {
+      return NextResponse.json(
+        { error: 'Case not found after update' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({
-      ...result.value,
-      _id: result.value._id.toString(),
-    });
+    return NextResponse.json(updatedCase);
   } catch (error) {
     console.error('Error updating case:', error);
     return NextResponse.json(
-      { error: 'Failed to update case' },
+      {
+        error: 'Failed to update case',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

@@ -189,6 +189,8 @@ export async function PUT(
     }
 
     const objectId = new ObjectId(id);
+
+    // First verify the document exists
     const existingDocument = await db
       .collection<Document>('documents')
       .findOne({ _id: objectId });
@@ -205,13 +207,13 @@ export async function PUT(
     const content = formData.get('content') as string;
     const type = formData.get('type') as string;
     const file = formData.get('file') as File | null;
-    const removeFile = formData.get('removeFile') === 'true'; // Flag to explicitly remove file
+    const removeFile = formData.get('removeFile') === 'true';
 
     let fileUrl = existingDocument.fileUrl;
     let cloudinaryPublicId = existingDocument.cloudinaryPublicId;
 
+    // Handle file operations
     if (removeFile && cloudinaryPublicId) {
-      // Delete existing file from Cloudinary if requested
       try {
         await deleteFileFromCloudinary(cloudinaryPublicId);
         fileUrl = '';
@@ -221,10 +223,8 @@ export async function PUT(
           'Failed to delete old file from Cloudinary:',
           deleteError
         );
-        // Continue without failing the whole request, but log the error
       }
     } else if (file) {
-      // New file uploaded, delete old one if exists and upload new
       if (cloudinaryPublicId) {
         try {
           await deleteFileFromCloudinary(cloudinaryPublicId);
@@ -262,30 +262,46 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    const result = await db
+    // Perform the update
+    const updateResult = await db
       .collection<Document>('documents')
-      .findOneAndUpdate(
-        { _id: objectId },
-        { $set: updatePayload },
-        { returnDocument: 'after' }
-      );
+      .updateOne({ _id: objectId }, { $set: updatePayload });
 
-    if (!result.value) {
+    if (updateResult.modifiedCount === 0) {
+      // No changes were made, but this isn't necessarily an error
+      // Return the existing document with 200 status
+      return NextResponse.json({
+        ...existingDocument,
+        _id: existingDocument._id.toString(),
+        caseId: existingDocument.caseId?.toString(),
+      });
+    }
+
+    // Fetch the updated document
+    const updatedDocument = await db
+      .collection<Document>('documents')
+      .findOne({ _id: objectId });
+
+    if (!updatedDocument) {
+      // This should theoretically never happen since we just updated it
       return NextResponse.json(
-        { error: 'Document not found or no changes made' },
+        { error: 'Document not found after update' },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
-      ...result.value,
-      _id: result.value._id.toString(),
-      caseId: result.value.caseId.toString(),
+      ...updatedDocument,
+      _id: updatedDocument._id.toString(),
+      caseId: updatedDocument.caseId?.toString(),
     });
   } catch (error) {
     console.error('Error updating document:', error);
     return NextResponse.json(
-      { error: 'Failed to update document' },
+      {
+        error: 'Failed to update document',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

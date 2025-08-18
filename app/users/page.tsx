@@ -210,24 +210,192 @@ export default function UsersPage() {
     message.success('Copied to clipboard');
   };
 
-  const resetUserPassword = async (userId: string) => {
+  const resetUserPassword = async (userId: string, isAdmin: boolean) => {
     try {
-      const response = await fetch(`/api/users/${userId}/password/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      if (isAdmin) {
+        // Admin password reset flow
+        Modal.confirm({
+          title: 'Admin Password Reset',
+          content: (
+            <div className='mt-4'>
+              <Form
+                id='adminPasswordResetForm'
+                layout='vertical'
+                onFinish={async (values) => {
+                  const response = await fetch(
+                    `/api/users/${userId}/password/`,
+                    {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        newPassword: values.newPassword,
+                        adminOverride: true,
+                      }),
+                    }
+                  );
 
-      if (response.ok) {
-        message.success('Password reset link sent to user');
+                  if (response.ok) {
+                    message.success('Password reset successfully');
+                    Modal.destroyAll();
+                  } else {
+                    const errorData = await response.json();
+                    throw new Error(
+                      errorData.error || 'Failed to reset password'
+                    );
+                  }
+                }}
+              >
+                <Form.Item
+                  name='newPassword'
+                  label='New Password'
+                  rules={[
+                    { required: true, message: 'Please input new password' },
+                    {
+                      min: 8,
+                      message: 'Password must be at least 8 characters',
+                    },
+                  ]}
+                >
+                  <Input.Password placeholder='New password' />
+                </Form.Item>
+                <Alert
+                  message='Warning'
+                  description="You are changing this user's password as an administrator. The user will need to use this new password to login."
+                  type='warning'
+                  showIcon
+                />
+              </Form>
+            </div>
+          ),
+          okText: 'Reset Password',
+          okButtonProps: { htmlType: 'submit', form: 'adminPasswordResetForm' },
+          cancelText: 'Cancel',
+          onCancel: () => Modal.destroyAll(),
+        });
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reset password');
+        // Regular user password change flow
+        Modal.confirm({
+          title: 'Change Password',
+          content: (
+            <div className='mt-4'>
+              <Form
+                id='passwordChangeForm'
+                layout='vertical'
+                onFinish={async (values) => {
+                  const response = await fetch(
+                    `/api/users/${userId}/password/`,
+                    {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        currentPassword: values.currentPassword,
+                        newPassword: values.newPassword,
+                      }),
+                    }
+                  );
+
+                  if (response.ok) {
+                    message.success('Password changed successfully');
+                    Modal.destroyAll();
+                  } else {
+                    const errorData = await response.json();
+                    throw new Error(
+                      errorData.error || 'Failed to change password'
+                    );
+                  }
+                }}
+              >
+                <Form.Item
+                  name='currentPassword'
+                  label='Current Password'
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Please input current password',
+                    },
+                  ]}
+                >
+                  <Input.Password placeholder='Current password' />
+                </Form.Item>
+                <Form.Item
+                  name='newPassword'
+                  label='New Password'
+                  rules={[
+                    { required: true, message: 'Please input new password' },
+                    {
+                      min: 8,
+                      message: 'Password must be at least 8 characters',
+                    },
+                  ]}
+                >
+                  <Input.Password placeholder='New password' />
+                </Form.Item>
+              </Form>
+            </div>
+          ),
+          okText: 'Change Password',
+          okButtonProps: { htmlType: 'submit', form: 'passwordChangeForm' },
+          cancelText: 'Cancel',
+          onCancel: () => Modal.destroyAll(),
+        });
       }
     } catch (err) {
       message.error(
         err instanceof Error ? err.message : 'Failed to reset password'
       );
     }
+  };
+
+  const handleForgotPassword = async () => {
+    Modal.confirm({
+      title: 'Forgot Password',
+      content: (
+        <div className='mt-4'>
+          <Form
+            id='forgotPasswordForm'
+            layout='vertical'
+            onFinish={async (values) => {
+              const response = await fetch('/api/users/password/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: values.email }),
+              });
+
+              if (response.ok) {
+                message.success(
+                  'If an account exists with this email, a reset link has been sent'
+                );
+                Modal.destroyAll();
+              } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to send reset link');
+              }
+            }}
+          >
+            <Form.Item
+              name='email'
+              label='Email'
+              rules={[
+                { required: true, message: 'Please input your email' },
+                { type: 'email', message: 'Please enter a valid email' },
+              ]}
+            >
+              <Input placeholder='Your email address' />
+            </Form.Item>
+            <Alert
+              message='Instructions'
+              description="Enter your email address and we'll send you a link to reset your password."
+              type='info'
+              showIcon
+            />
+          </Form>
+        </div>
+      ),
+      okText: 'Send Reset Link',
+      okButtonProps: { htmlType: 'submit', form: 'forgotPasswordForm' },
+      cancelText: 'Cancel',
+      onCancel: () => Modal.destroyAll(),
+    });
   };
 
   const columns = [
